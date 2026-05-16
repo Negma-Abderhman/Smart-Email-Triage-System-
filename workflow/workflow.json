@@ -1,0 +1,869 @@
+{
+  "name": "Smart Email Triage System",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an email classifier.\n\nClassify the email into ONE of:\nURGENT, IMPORTANT, NEWSLETTER, SPAM.\n\nIMPORTANT RULES:\n- category must be EXACTLY one word (no spaces, no new lines)\n- do NOT add any spaces or new lines before or after the value\n- output must be compact JSON in one single line\n\nReturn ONLY JSON like this:\n{\"category\":\"URGENT\",\"reason\":\"short explanation\"}\n\nEmail:\n{{ $json.snippet }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You classify emails into exactly one of: URGENT, IMPORTANT, NEWSLETTER, SPAM. Respond with JSON: {\"category\":\"...\", \"reason\":\"...\"}.\n\nURGENT: Requires immediate action or response (meetings, deadlines, time-sensitive requests)\nIMPORTANT: Needs attention but not urgent (project updates, work discussions)\nNEWSLETTER: Marketing emails, subscriptions, promotional content\nSPAM: Unwanted or suspicious emails",
+          "maxIterations": 1
+        }
+      },
+      "id": "ce0a4aaa-ce9d-4020-8bca-bd9c5428c6fa",
+      "name": "Classify Email",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        528,
+        344
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "862d357b-8133-4359-9722-c2fb05a1ef18",
+      "name": "Google Gemini Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        528,
+        576
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "v3CqLfkMju40sC9J",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "category",
+              "value": "={{ JSON.parse($json.output).category.replace(/\\n/g, '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "reason",
+              "value": "={{ JSON.parse($json.output).reason.trim() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "emailId",
+              "value": "={{ $('Get many messages').item.json.id }}\n",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "threadId",
+              "value": "={{ $('Get many messages').item.json.threadId }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "from",
+              "value": "={{ $('Get many messages').item.json.from || $('Get many messages').item.json.snippet }}\n",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "subject",
+              "value": "={{ $('Get many messages').item.json.snippet }}",
+              "type": "string"
+            },
+            {
+              "id": "7",
+              "name": "emailText",
+              "value": "={{ $('Get many messages').item.json.snippet }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a029708c-52bc-48fc-94af-27bf81601905",
+      "name": "Extract Category",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "URGENT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "2ccfc2e8-b66b-4581-97f5-5cc81e1fb7b7"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "URGENT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "IMPORTANT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "5662bcb7-62c9-41cf-aa65-e0c8a046b4cb"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "IMPORTANT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "NEWSLETTER",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "841e09b6-7e16-443c-a8d8-0435e918e607"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "NEWSLETTER"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "SPAM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "60c26de8-341e-473d-a83d-ee0a9ad804f1"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "SPAM"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1cddd741-f994-40ff-8001-14a030cc4d0a",
+      "name": "Route by Category",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1104,
+        312
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a professional email reply.\n\n- Be polite and clear\n- Respond appropriately to the email\n- Keep it concise\n- Sign as Negma\n\nOriginal Email:\nFrom: {{ $json.from }}\nSubject: {{ $json.subject }}\n\n{{ $json.emailText }}\n",
+        "options": {
+          "systemMessage": "Draft a professional reply to this email. Match the sender's tone (formal or casual). Be concise and helpful. Sign as \"AI Assistant (Draft - Please Review)\".",
+          "maxIterations": 1
+        }
+      },
+      "id": "150429ac-07bb-4897-80c1-2c8cb6037454",
+      "name": "Generate Reply",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1280,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "311aa185-7a5b-4e9e-9750-b98985f2d33e",
+      "name": "Gemini Model for Draft",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1280,
+        -64
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "nusW7xUbwcQaiXf0",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "=Re: {{ $('Extract Category').item.json.subject }}",
+        "message": "={{ $('Generate Reply').item.json.output }}\n",
+        "options": {
+          "sendTo": "=labaiu210@gmail.com"
+        }
+      },
+      "id": "b723b2dc-86bd-4e04-8c8f-e6e4fecc1516",
+      "name": "Create Draft Reply",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        -256
+      ],
+      "webhookId": "8a03c34c-0f3b-495a-9525-6edb70081d4b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "4eH8gRJj9lHlkt9P",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "from",
+              "value": "={{ $('Extract Category').item.json.from }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "subject",
+              "value": "={{ $('Extract Category').item.json.subject }}\n",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "category",
+              "value": "={{ $('Extract Category').item.json.category }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "action_taken",
+              "value": "Draft reply created",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3daa67e2-9247-4154-bfe5-19671e70ca68",
+      "name": "Log Urgent Action",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1888,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "id": "5fe3f31f-1010-48bd-a606-f56a510be311",
+      "name": "Merge All Logs",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2336,
+        312
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "from",
+              "value": "={{ $json.from }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "subject",
+              "value": "={{ $json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "category",
+              "value": "={{ $json.category }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "action_taken",
+              "value": "Left in inbox",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "61d9c54f-ab0e-45b0-90b4-de4d093732d4",
+      "name": "Log Important",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1664,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "from",
+              "value": "={{ $('Extract Category').item.json.from }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "subject",
+              "value": "={{ $('Extract Category').item.json.subject }}\n",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "category",
+              "value": "={{ $('Extract Category').item.json.category }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "action_taken",
+              "value": "Labeled Newsletter + Archived",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c4ed0b4f-5636-4bc0-bdce-f7cbf036d14f",
+      "name": "Log Newsletter Action",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1824,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "from",
+              "value": "={{ $('Extract Category').item.json.from",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "subject",
+              "value": "={{ $('Extract Category').item.json.subject }}\n",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "category",
+              "value": "={{ $('Extract Category').item.json",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "action_taken",
+              "value": "Labeled AutoSpam + Archived",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2eddaee-a939-44bf-b01e-ed0ad5180566",
+      "name": "Log Spam Action",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1776,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "10No9GsE6QZrDVXQlktcR1_XKdeDWqM7KvPI4yFIcNDs",
+          "mode": "list",
+          "cachedResultName": "Untitled spreadsheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10No9GsE6QZrDVXQlktcR1_XKdeDWqM7KvPI4yFIcNDs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10No9GsE6QZrDVXQlktcR1_XKdeDWqM7KvPI4yFIcNDs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $json.timestamp }}",
+            "from": "={{ $json.from }}",
+            "subject": "={{ $json.subject }}",
+            "category": "={{ $json.category }}",
+            "action": "={{ $json.action_taken }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "from",
+              "displayName": "from",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d33e540a-3de9-408e-beea-201213924b4f",
+      "name": "Log to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2560,
+        344
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "v8pXR0vZXpF4hwu7",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        80,
+        344
+      ],
+      "id": "ed7f57a4-ab20-47c0-bf2f-705eba8305bf",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 5,
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        344
+      ],
+      "id": "a69bf042-c223-4658-aa7c-5cb77d23ca41",
+      "name": "Get many messages",
+      "webhookId": "23d1788d-5e08-46d0-8d23-c92e665aa3cd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QH8pFfwoaIpkBMgk",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "messageId": "={{ $json.emailId.replace('\\n','') }}",
+        "labelIds": [
+          "INBOX"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1600,
+        384
+      ],
+      "id": "37ed2f96-948b-48a5-91e4-7b004d7cee67",
+      "name": "Remove label from message",
+      "webhookId": "b76b6c7f-a1f4-41e4-b11a-3bf6337a18c8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QH8pFfwoaIpkBMgk",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "messageId": "={{ $('Get many messages').item.json.id }}",
+        "labelIds": [
+          "INBOX"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1392,
+        656
+      ],
+      "id": "7a4f1b17-ab49-4005-905a-4952e57eaf57",
+      "name": "Remove label from message1",
+      "webhookId": "c81e5d4d-46d2-4dcb-8d13-1359dafcc816",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QH8pFfwoaIpkBMgk",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Classify Email": {
+      "main": [
+        [
+          {
+            "node": "Extract Category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classify Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Category": {
+      "main": [
+        [
+          {
+            "node": "Route by Category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Category": {
+      "main": [
+        [
+          {
+            "node": "Generate Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Important",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Remove label from message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Remove label from message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Reply": {
+      "main": [
+        [
+          {
+            "node": "Create Draft Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Model for Draft": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Reply",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Draft Reply": {
+      "main": [
+        [
+          {
+            "node": "Log Urgent Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Urgent Action": {
+      "main": [
+        [
+          {
+            "node": "Merge All Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Logs": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Important": {
+      "main": [
+        [
+          {
+            "node": "Merge All Logs",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Log Newsletter Action": {
+      "main": [
+        [
+          {
+            "node": "Merge All Logs",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Log Spam Action": {
+      "main": [
+        [
+          {
+            "node": "Merge All Logs",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Classify Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove label from message": {
+      "main": [
+        [
+          {
+            "node": "Log Newsletter Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove label from message1": {
+      "main": [
+        [
+          {
+            "node": "Log Spam Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "fa2bc6ee-a8cc-4797-82ca-a96739250bed",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "08ab12e4b3714bfd1cadb1ff69d5f93dd9a879a273a1e0fb3ae0f30cf6b36c15"
+  },
+  "id": "2WdiayETounehe78",
+  "tags": []
+}
